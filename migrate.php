@@ -4,7 +4,7 @@
 require_once __DIR__ . '/autoload.php';
 
 use App\Exceptions\DatabaseException;
-use App\Utils\Database; // O utilitário Database sem namespace
+use App\Utils\Database;
 
 // Carregar as configurações do ambiente e definir no Database
 $dbConfig = require_once __DIR__ . '/config/database.php';
