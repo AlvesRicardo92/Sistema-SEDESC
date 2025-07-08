@@ -30,5 +30,5 @@ try {
     $pdo->exec($sql);
     echo "  - Tabela 'procedimentos' criada ou já existente.\n";
 } catch (PDOException $e) {
-    throw new DatabaseException("Erro ao criar a tabela 'usuarios': " . $e->getMessage(), 0, $e);
+    throw new DatabaseException("Erro ao criar a tabela 'procedimentos': " . $e->getMessage(), 0, $e);
 }
