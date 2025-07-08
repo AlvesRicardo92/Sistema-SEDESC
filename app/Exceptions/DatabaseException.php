@@ -1,4 +1,5 @@
 <?php
+// DatabaseException.php
 namespace App\Exceptions;
 
 use RuntimeException;
@@ -6,8 +7,8 @@ use Throwable;
 
 class DatabaseException extends RuntimeException
 {
-    public function __construct($message = "", $code = 0, Throwable $previous = null)
+    public function __construct($mensagem = "", $codigo = 0, Throwable $anterior = null)
     {
-        parent::__construct($message, $code, $previous);
+        parent::__construct($mensagem, $codigo, $anterior);
     }
 }

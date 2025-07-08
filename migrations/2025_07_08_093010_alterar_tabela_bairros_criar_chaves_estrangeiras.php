@@ -1,5 +1,5 @@
 <?php
-// migrations/2025_07_08_093010_alterar_tabela_bairros.php
+// migrations/2025_07_08_093010_alterar_tabela_bairros_criar_chaves_estrangeiras.php
 
 use App\Utils\Database;
 use App\Exceptions\DatabaseException;

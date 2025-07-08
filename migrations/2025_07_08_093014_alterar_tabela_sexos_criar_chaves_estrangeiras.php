@@ -1,5 +1,5 @@
 <?php
-// migrations/2025_07_08_093014_alterar_tabela_sexos.php
+// migrations/2025_07_08_093014_alterar_tabela_sexos_criar_chaves_estrangeiras.php
 
 use App\Utils\Database;
 use App\Exceptions\DatabaseException;

@@ -1,5 +1,5 @@
 <?php
-// migrations/2025_07_08_093013_alterar_tabela_procedimentos.php
+// migrations/2025_07_08_093013_alterar_tabela_procedimentos_criar_chaves_estrangeiras.php
 
 use App\Utils\Database;
 use App\Exceptions\DatabaseException;

@@ -10,7 +10,6 @@ try {
     CREATE TABLE IF NOT EXISTS auditorias (
         id int(11) NOT NULL AUTO_INCREMENT,
         nome_tabela varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-        id_registro int(11) NOT NULL,
         acao enum('INSERT','UPDATE','DELETE') COLLATE utf8mb4_unicode_ci NOT NULL,
         dados_antigos json DEFAULT NULL,
         dados_novos json DEFAULT NULL,

@@ -1,5 +1,5 @@
 <?php
-// migrations/2025_07_08_093010_alterar_tabela_bairros.php
+// migrations/2025_07_08_093012_alterar_tabela_pessoas_criar_chaves_estrangeiras.php
 
 use App\Utils\Database;
 use App\Exceptions\DatabaseException;
@@ -7,12 +7,13 @@ use App\Exceptions\DatabaseException;
 try {
     $pdo = Database::getInstance();
     $sql = "
-    ALTER TABLE `demandantes`
+    ALTER TABLE `pessoas`
+        ADD CONSTRAINT `fk_pessoa_sexo` FOREIGN KEY (`id_sexo`) REFERENCES `sexos` (`id`) ON UPDATE CASCADE,
         ADD CONSTRAINT `fk_usuario_criacao` FOREIGN KEY (`id_usuario_criacao`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE,
         ADD CONSTRAINT `fk_usuario_atualizacao` FOREIGN KEY (`id_usuario_atualizacao`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE;
     ";
     $pdo->exec($sql);
-    echo "  - Tabela 'demandantes' alterada - Chaves estrangeiras criadas.\n";
+    echo "  - Tabela 'pessoas' alterada - Chaves estrangeiras criadas.\n";
 } catch (PDOException $e) {
-    throw new DatabaseException("Erro ao criar chaves estrangeiras na tabela 'demandantes': " . $e->getMessage(), 0, $e);
+    throw new DatabaseException("Erro ao criar chaves estrangeiras na 'pessoas': " . $e->getMessage(), 0, $e);
 }
