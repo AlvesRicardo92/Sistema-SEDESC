@@ -1,0 +1,131 @@
+/* assets/css/style.css */
+
+/* Estilos gerais para o corpo do documento */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f8f9fa; /* Bootstrap light background */
+    color: #343a40; /* Bootstrap dark text */
+    margin: 0;
+}
+
+/* Centralização para telas de login e primeiro acesso */
+body.auth-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Estilo para cards (usado em login, primeiro acesso, e em algumas views) */
+.card-custom {
+    border-radius: 0.75rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+    width: 100%;
+    max-width: 450px; /* Largura máxima para formulários de autenticação */
+}
+
+/* Estilos para inputs de formulário */
+.form-control-custom {
+    border-radius: 0.5rem;
+}
+
+/* Estilos para botões personalizados */
+.btn-custom {
+    border-radius: 0.5rem;
+}
+
+/* Estilos para a barra de navegação customizada */
+.navbar-custom {
+    background-color: #0d6efd; /* Bootstrap primary color */
+}
+.navbar-custom .navbar-brand,
+.navbar-custom .nav-link {
+    color: white;
+}
+.navbar-custom .nav-link:hover {
+    color: #e9ecef; /* Light gray on hover */
+}
+
+/* Estilos para o container do carrossel no dashboard */
+.carousel-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 56px); /* Altura da viewport menos a altura da navbar */
+    flex-direction: column;
+}
+.carousel-inner img {
+    max-height: 400px; /* Altura máxima para as imagens do carrossel */
+    object-fit: contain; /* Garante que a imagem se ajuste sem cortar */
+    width: auto; /* Largura automática para manter a proporção */
+    margin: auto; /* Centraliza a imagem no slide */
+}
+.carousel-caption {
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    bottom: 20px; /* Ajusta a posição da legenda */
+}
+.carousel-item {
+    text-align: center; /* Centraliza o conteúdo do slide */
+}
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+    filter: invert(1); /* Torna os ícones visíveis em fundos escuros */
+}
+
+/* Estilos para tabelas nas views de listagem */
+.container-list {
+    max-width: 1200px;
+    margin-top: 3rem;
+}
+.table-custom th {
+    background-color: #e9ecef; /* Bootstrap light gray */
+    color: #495057; /* Bootstrap dark gray */
+}
+.table-custom .table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.075);
+}
+
+/* Estilos para detalhes (list-group) */
+.list-group-item-custom {
+    border: none;
+    padding-left: 0;
+    padding-right: 0;
+}
+.list-group-item-custom strong {
+    min-width: 150px;
+    display: inline-block;
+}
+
+/* Mensagens de erro/sucesso */
+.alert-custom {
+    border-radius: 0.5rem;
+}
+
+/* Estilos para a página 404 */
+body.error-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    text-align: center;
+}
+.error-container {
+    max-width: 600px;
+    padding: 2rem;
+}
+.error-code {
+    font-size: 8rem;
+    font-weight: bold;
+    color: #dc3545; /* Bootstrap red */
+    line-height: 1;
+}
+.error-message {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    color: #343a40;
+}
