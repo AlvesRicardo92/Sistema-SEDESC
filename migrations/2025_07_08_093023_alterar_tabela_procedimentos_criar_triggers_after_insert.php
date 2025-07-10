@@ -11,7 +11,7 @@ try {
     // FOR EACH ROW: O trigger é executado para cada linha afetada pela operação
     // NEW: Refere-se aos valores da linha após a operação (para INSERT e UPDATE)
     // OLD: Refere-se aos valores da linha antes da operação (para UPDATE e DELETE)
-    $sql = "
+    $conn = "
         CREATE TRIGGER trigger_procedimentos_after_insert
         AFTER INSERT ON procedimentos
         FOR EACH ROW
@@ -51,8 +51,14 @@ try {
             );
         END;
     ";
-    $pdo->exec($sql);
+    // Executa a query usando o método query() do MySQLi
+    $conn->query($sql);
+
+    // Verifica se houve erro na execução da query
+    if ($conn->errno) {
+        throw new DatabaseException("Erro ao editar a tabela 'procedimentos' para criação do trigger after insert: " . $conn->error, $conn->errno);
+    }
     echo "  - Tabela 'procedimentos' alterada - Trigger After Insert criado.\n";
-} catch (PDOException $e) {
+} catch (\mysqli_sql_exception $e) {
     throw new DatabaseException("Erro ao editar a tabela 'procedimentos' para criação do trigger after insert: " . $e->getMessage(), 0, $e);
 }

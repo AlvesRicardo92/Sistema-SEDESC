@@ -5,7 +5,7 @@ use App\Utils\Database;
 use App\Exceptions\DatabaseException;
 
 try {
-    $pdo = Database::getInstance();
+    $conn = Database::getInstance();
     // SQL para criar o trigger
     // BEFORE/AFTER: Define quando o trigger é executado (antes ou depois da operação)
     // FOR EACH ROW: O trigger é executado para cada linha afetada pela operação
@@ -66,8 +66,14 @@ try {
             );
         END;
     ";
-    $pdo->exec($sql);
+    // Executa a query usando o método query() do MySQLi
+    $conn->query($sql);
+
+    // Verifica se houve erro na execução da query
+    if ($conn->errno) {
+        throw new DatabaseException("Erro ao editar a tabela 'procedimentos' para criação do trigger after update: " . $conn->error, $conn->errno);
+    }
     echo "  - Tabela 'procedimentos' alterada - Trigger After Update criado.\n";
-} catch (PDOException $e) {
+} catch (\mysqli_sql_exception $e) {
     throw new DatabaseException("Erro ao editar a tabela 'procedimentos' para criação do trigger after update: " . $e->getMessage(), 0, $e);
 }

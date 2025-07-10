@@ -9,7 +9,7 @@ function carregarEnv($filePath) {
     $linhas = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($linhas as $linha) {
         $linha = trim($linha);
-        if (str_starts_with($linha, '#') || empty($linha)) {
+        if (substr($linha, 0,1)==="#" || empty($linha)) {
             continue;
         }
         list($key, $value) = explode('=', $linha, 2);
@@ -19,7 +19,7 @@ function carregarEnv($filePath) {
 }
 
 // Carrega o arquivo .env a partir da raiz do projeto
-loadEnv(__DIR__ . '/../.env');
+carregarEnv(__DIR__ . '/../.env');
 
 return [
     'host' => $_ENV['DB_HOST'] ?? '',

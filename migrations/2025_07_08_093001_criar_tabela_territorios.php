@@ -5,7 +5,7 @@ use App\Utils\Database;
 use App\Exceptions\DatabaseException;
 
 try {
-    $pdo = Database::getInstance();
+    $conn = Database::getInstance();
     $sql = "
     CREATE TABLE IF NOT EXISTS territorios_ct (
         id int(11) NOT NULL AUTO_INCREMENT,
@@ -18,8 +18,14 @@ try {
         PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ";
-    $pdo->exec($sql);
+    // Executa a query usando o método query() do MySQLi
+    $conn->query($sql);
+
+    // Verifica se houve erro na execução da query
+    if ($conn->errno) {
+        throw new DatabaseException("Erro ao criar a tabela 'territórios': " . $conn->error, $conn->errno);
+    }
     echo "  - Tabela 'territórios' criada ou já existente.\n";
-} catch (PDOException $e) {
+} catch (\mysqli_sql_exception $e) {
     throw new DatabaseException("Erro ao criar a tabela 'territórios': " . $e->getMessage(), 0, $e);
 }

@@ -5,7 +5,7 @@ use App\Utils\Database;
 use App\Exceptions\DatabaseException;
 
 try {
-    $pdo = Database::getInstance();
+    $conn = Database::getInstance();
     $sql = "
     ALTER TABLE `procedimentos`
         ADD CONSTRAINT `fk_procedimento_territorio` FOREIGN KEY (`id_territorio`) REFERENCES `territorios` (`id`),
@@ -16,8 +16,14 @@ try {
         ADD CONSTRAINT `fk_usuario_criacao` FOREIGN KEY (`id_usuario_criacao`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE,
         ADD CONSTRAINT `fk_usuario_atualizacao` FOREIGN KEY (`id_usuario_atualizacao`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE;
     ";
-    $pdo->exec($sql);
+    // Executa a query usando o método query() do MySQLi
+    $conn->query($sql);
+
+    // Verifica se houve erro na execução da query
+    if ($conn->errno) {
+        throw new DatabaseException("Erro ao criar chaves estrangeiras na tabela 'procedimentos': " . $conn->error, $conn->errno);
+    }
     echo "  - Tabela 'procedimentos' alterada - Chaves estrangeiras criadas.\n";
-} catch (PDOException $e) {
+} catch (\mysqli_sql_exception $e) {
     throw new DatabaseException("Erro ao criar chaves estrangeiras na tabela 'procedimentos': " . $e->getMessage(), 0, $e);
 }

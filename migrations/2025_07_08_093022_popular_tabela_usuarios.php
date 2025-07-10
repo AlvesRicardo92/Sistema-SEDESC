@@ -5,7 +5,7 @@ use App\Utils\Database;
 use App\Exceptions\DatabaseException;
 
 try {
-    $pdo = Database::getInstance();
+    $conn = Database::getInstance();
     $sql = "
     INSERT INTO `usuarios` (`id`, `nome`, `usuario`, `senha`, `territorio_id`, `ativo`, `data_hora_criacao`, `data_hora_atualizacao`, `permissoes`, `primeiro_acesso`, `id_usuario_criacao`, `id_usuario_atualizacao`) VALUES
         (1, 'Admin Geral', 'admin.geral', '$2y$10$HJKiHas5Gm3z3uVD//KYBeoiliR6CHvyuPnQWX9pAh2/5K8ZCyDfy', 4, 1, '2025-06-28 11:22:04', '2025-07-04 08:49:30', '4111111111', 0, 1, 1),
@@ -16,8 +16,14 @@ try {
         (6, 'nome', 'usuario.teste', '$2y$10$RTlkaq77XJ95EWt7NVw5mOr46LThsxoAlJq23NGZFcXlZZiVA8JM2', 1, 1, '2025-07-02 16:27:28', '2025-07-04 08:49:34', '4321011110', 1, 1, 1),
         (7, 'nome 2 do usuário teste', 'usuario.teste2', '$2y$10$4esztB7iWf1rc7ZDFCbdSedulJ9KFjDZhrRmb0vEbcgapUx/aQxv6', 1, 1, '2025-07-02 16:34:45', '2025-07-02 16:52:32', '4321011110', 1, 1, 1);
     ";
-    $pdo->exec($sql);
+    // Executa a query usando o método query() do MySQLi
+    $conn->query($sql);
+
+    // Verifica se houve erro na execução da query
+    if ($conn->errno) {
+        throw new DatabaseException("Erro ao popular a tabela 'usuarios': " . $conn->error, $conn->errno);
+    }
     echo "  - Tabela 'usuarios' alterada - Dados inseridos.\n";
-} catch (PDOException $e) {
+} catch (\mysqli_sql_exception $e) {
     throw new DatabaseException("Erro ao popular a tabela 'usuarios': " . $e->getMessage(), 0, $e);
 }

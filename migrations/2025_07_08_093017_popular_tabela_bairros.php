@@ -5,7 +5,7 @@ use App\Utils\Database;
 use App\Exceptions\DatabaseException;
 
 try {
-    $pdo = Database::getInstance();
+    $conn = Database::getInstance();
     $sql = "
     INSERT INTO `bairros` (`id`, `nome`, `territorio_id`, `ativo`, `id_usuario_criacao`, `data_hora_criacao`, `id_usuario_atualizacao`, `data_hora_atualizacao`) VALUES
         (1, 'Centro', 1, 1, 1, '2025-06-28 11:31:08', 1, '2025-06-30 12:55:15'),
@@ -14,8 +14,14 @@ try {
         (4, 'Vila Mariana', 4, 1, 1, '2025-06-28 11:31:08', 1, '2025-06-30 12:55:26'),
         (5, 'novo Bairro II', 2, 1, 1, '2025-07-07 14:55:11', 1, '2025-07-07 14:55:11');
     ";
-    $pdo->exec($sql);
+    // Executa a query usando o método query() do MySQLi
+    $conn->query($sql);
+
+    // Verifica se houve erro na execução da query
+    if ($conn->errno) {
+        throw new DatabaseException("Erro ao popular a tabela 'bairros': " . $conn->error, $conn->errno);
+    }
     echo "  - Tabela 'bairros' alterada - Dados inseridos.\n";
-} catch (PDOException $e) {
+} catch (\mysqli_sql_exception $e) {
     throw new DatabaseException("Erro ao popular a tabela 'bairros': " . $e->getMessage(), 0, $e);
 }
