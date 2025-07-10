@@ -4,8 +4,11 @@
 // Inicia a sessão PHP para gerenciar o estado do usuário
 session_start();
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/autoload.php';
-require_once __DIR__ . '/config/database.php';
 
 use App\Controllers\ProcedimentoController;
 use App\Controllers\UsuarioController;
@@ -21,8 +24,23 @@ use App\Controllers\AvisoController; // Adicionado para incluir o AvisoControlle
 use App\Utils\Database;
 
 // Carregar as configurações do ambiente e definir no Database
-// Certifique-se de que este arquivo 'config/database.php' existe e retorna um array de configuração
+// Inicia o buffer de saída para capturar qualquer output indesejado ANTES do retorno do arquivo de configuração
+ob_start();
 $dbConfig = require_once __DIR__ . '/config/database.php';
+$output = ob_get_clean(); // Pega o conteúdo do buffer e limpa
+
+// Verifica se houve algum output inesperado do arquivo de configuração
+if (!empty($output)) {
+    echo "ERRO FATAL: O arquivo 'config/database.php' ou um de seus includes está gerando output inesperado antes do retorno do array de configuração. Conteúdo capturado: <pre>" . htmlspecialchars($output) . "</pre>";
+    exit();
+}
+
+// Verifica se $dbConfig é realmente um array. Se não for, o arquivo de configuração não retornou o array esperado.
+if (!is_array($dbConfig)) {
+    echo "ERRO FATAL: O arquivo 'config/database.php' não está retornando um array de configuração válido. Verifique se há um 'return [...]' no final do arquivo e nenhum caractere extra antes de '<?php' ou depois de '?>' em 'config/database.php' ou 'autoload.php'. Tipo recebido: " . gettype($dbConfig);
+    exit();
+}
+
 Database::setConfig($dbConfig);
 
 $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -371,7 +389,7 @@ switch ($requestUri) {
         $controller = new MigracaoController();
         $controller->salvar();
         break;
-    case '/migracoes/editar': // Nova rota para exibir formulário de edição
+    case '/migracoes/editar':
         $controller = new MigracaoController();
         $id = $query['id'] ?? null;
         if ($id !== null && is_numeric($id)) {

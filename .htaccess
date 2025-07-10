@@ -4,7 +4,7 @@ RewriteEngine On
 # Define a base do diretório para a reescrita.
 # Se seu aplicativo estiver em um subdiretório (ex: http://localhost/meuapp/),
 # você precisará ajustar esta linha para: RewriteBase /meuapp/
-RewriteBase /Sistema SEDESC/Homologação/
+RewriteBase /Sistema_SEDESC/Homologacao/
 
 # Regra para evitar que arquivos ou diretórios existentes sejam reescritos
 # Se a requisição for para um arquivo real, não faz nada
