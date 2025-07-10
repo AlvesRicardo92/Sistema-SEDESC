@@ -1,0 +1,42 @@
+seu_projeto/
+├── app/
+│   ├── DAO/
+│   │   └── AuditoriaDAO.php
+│   │   └── BairroDAO.php
+│   │   └── DemandanteDAO.php
+│   │   └── MigracaoDAO.php
+│   │   └── MotivoMigracaoDAO.php
+│   │   └── PessoaDAO.php
+│   │   └── ProcedimentoDAO.php
+│   │   └── SexoDAO.php
+│   │   └── TerritorioDAO.php
+│   │   └── UsuarioDAO.php
+│   ├── Exceptions/
+│   │   └── DatabaseException.php
+│   ├── Interfaces/
+│   │   └── BaseDAOInterface.php
+│   ├── Migrations/
+│   │   └── 2025_07_08_093000_criar_tabela_procedimentos.php
+│   │   └── ... (todos os outros arquivos de migração)
+│   ├── Models/
+│   │   └── Auditoria.php
+│   │   └── Bairro.php
+│   │   └── Demandante.php
+│   │   └── Migracao.php
+│   │   └── MotivoMigracao.php
+│   │   └── Pessoa.php
+│   │   └── Procedimento.php
+│   │   └── Sexo.php
+│   │   └── Territorio.php
+│   │   └── Usuario.php
+│   └── Utils/
+│       └── Database.php
+├── config/
+│   └── database.php
+├── .env
+├── .gitignore
+├── autoload.php
+├── estrutura de pastas e arquivos.txt
+├── migrate.php
+├── Readme.md
+└── rollback.php
