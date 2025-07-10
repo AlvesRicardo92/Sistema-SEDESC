@@ -7,43 +7,36 @@ use App\Exceptions\DatabaseException;
 use App\Utils\Database;
 
 // Carregar as configurações do ambiente e definir no Database
+// Certifique-se de que este arquivo 'config/database.php' existe e retorna um array de configuração
 $dbConfig = require_once __DIR__ . '/config/database.php';
 Database::setConfig($dbConfig);
 
 echo "--- Gerenciador de Migrações --- \n\n";
 
 try {
-    /** @var mysqli $conn */ 
-    // Adiciona um hint de tipo para a IDE
-    $conn = Database::getInstance(); // Agora retorna uma instância de mysqli
+    $mysqli = Database::getInstance();
 
     // 1. Garantir que a tabela 'migrations' exista
-    // Usar query() para comandos DDL (CREATE TABLE)
-    $conn->query("
+    $createMigrationsTableSql = "
         CREATE TABLE IF NOT EXISTS migrations (
             id INT AUTO_INCREMENT PRIMARY KEY,
             nome_migration VARCHAR(255) NOT NULL UNIQUE,
             data_hora_execucao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    ");
-    // Verificar se houve erro na query
-    if ($conn->errno) {
-        throw new DatabaseException("Erro ao criar/verificar tabela 'migrations': " . $conn->error, $conn->errno);
-    }
+    ";
+    Database::execute($createMigrationsTableSql);
     echo "Tabela 'migrations' verificada/criada.\n";
 
     // 2. Obter as migrations já executadas
-    $stmt = $conn->query("SELECT nome_migration FROM migrations");
-    if ($conn->errno) {
-        throw new DatabaseException("Erro ao consultar migrations existentes: " . $conn->error, $conn->errno);
+    $stmt = $mysqli->query("SELECT nome_migration FROM migrations");
+    if ($stmt === false) {
+        throw new DatabaseException("Erro ao buscar migrations executadas: " . $mysqli->error, $mysqli->errno);
     }
     $migrations_executadas = [];
-    if ($stmt->num_rows > 0) {
-        while ($row = $stmt->fetch_assoc()) { // fetch_assoc para resultados associativos
-            $migrations_executadas[] = $row['nome_migration'];
-        }
+    while ($row = $stmt->fetch_assoc()) {
+        $migrations_executadas[] = $row['nome_migration'];
     }
-    $stmt->free(); // Libera o resultado
+    $stmt->free_result();
 
     // 3. Obter todos os arquivos de migração
     $arquivos_migration = glob(__DIR__ . '/migrations/*.php');
@@ -53,26 +46,58 @@ try {
 
     // 4. Executar as novas migrations
     foreach ($arquivos_migration as $arquivo) {
-        $nome_migration = basename($arquivo, '.php');
-
-        if (!in_array($nome_migration, $migrations_executadas)) {
-            echo "Executando migration: " . $nome_migration . "...\n";
-            require $arquivo; // Inclui e executa o conteúdo do arquivo de migração
-
-            // Após a execução bem-sucedida, registra no banco de dados
-            $stmt = $conn->prepare("INSERT INTO migrations (nome_migration) VALUES (?)");
-            if ($stmt === false) {
-                throw new DatabaseException("Erro ao preparar statement para inserir migration: " . $conn->error, $conn->errno);
-            }
-            $stmt->bind_param("s", $nome_migration); // "s" para string, vincula o parâmetro
-            if (!$stmt->execute()) { // Executa o statement
-                throw new DatabaseException("Erro ao registrar migration " . $nome_migration . ": " . $stmt->error, $stmt->errno);
-            }
-            $stmt->close(); // Fecha o statement
-            echo "Migration " . $nome_migration . " executada e registrada com sucesso.\n";
-            $contador_novas_migrations++;
+        $nome_arquivo = basename($arquivo); // Ex: 2025_07_08_093000_criar_tabela_procedimentos.php
+        $nome_classe = str_replace('.php', '', $nome_arquivo); // Ex: 2025_07_08_093000_criar_tabela_procedimentos
+        
+        // Converte o nome do arquivo para o nome da classe esperada
+        // Ex: 2025_07_08_093000_criar_tabela_procedimentos -> CriarTabelaProcedimentos
+        $partes_nome = explode('_', $nome_classe);
+        // Remove as partes de data/hora e 'criar_tabela' ou 'alterar_tabela'
+        $partes_significativas = array_slice($partes_nome, 4); 
+        $nome_classe_formatado = '';
+        foreach ($partes_significativas as $parte) {
+            $nome_classe_formatado .= ucfirst($parte);
+        }
+        // Adiciona "Criar" ou "Alterar" no início se o nome original do arquivo contiver
+        if (strpos($nome_classe, 'criar_tabela') !== false) {
+            $nome_classe_final = 'Criar' . $nome_classe_formatado;
+        } elseif (strpos($nome_classe, 'alterar_tabela') !== false) {
+            $nome_classe_final = 'Alterar' . $nome_classe_formatado;
+        } elseif (strpos($nome_classe, 'popular_tabela') !== false) {
+            $nome_classe_final = 'Popular' . $nome_classe_formatado;
         } else {
-            echo "Migration " . $nome_migration . " já executada. Pulando.\n";
+            $nome_classe_final = $nome_classe_formatado; // Fallback
+        }
+
+        $namespace_classe = "App\\Migrations\\" . $nome_classe_final; // Assumindo namespace App\Migrations
+
+        if (!in_array($nome_classe, $migrations_executadas)) {
+            echo "Executando migration: " . $nome_classe . "...\n";
+            
+            // Inclui o arquivo para que a classe seja definida
+            require_once $arquivo; 
+
+            if (class_exists($namespace_classe)) {
+                $migration_instance = new $namespace_classe();
+                if (method_exists($migration_instance, 'up')) {
+                    $migration_instance->up(); // Executa o método up() da migração
+
+                    // Após a execução bem-sucedida, registra no banco de dados
+                    $stmt_insert = Database::prepare("INSERT INTO migrations (nome_migration) VALUES (?)");
+                    $stmt_insert->bind_param("s", $nome_classe);
+                    $stmt_insert->execute();
+                    $stmt_insert->close();
+
+                    echo "Migration " . $nome_classe . " executada e registrada com sucesso.\n";
+                    $contador_novas_migrations++;
+                } else {
+                    echo "Erro: Método 'up' não encontrado na classe de migração " . $namespace_classe . ".\n";
+                }
+            } else {
+                echo "Erro: Classe de migração " . $namespace_classe . " não encontrada no arquivo " . $arquivo . ".\n";
+            }
+        } else {
+            echo "Migration " . $nome_classe . " já executada. Pulando.\n";
         }
     }
 
@@ -84,23 +109,13 @@ try {
 
 } catch (DatabaseException $e) {
     echo "\nERRO CRÍTICO (DatabaseException): " . $e->getMessage() . "\n";
-    if ($e->getPrevious()) {
-        error_log("Exceção original no migrador: " . $e->getPrevious()->getMessage());
-        echo "Detalhes do erro original (logado): " . $e->getPrevious()->getMessage() . "\n";
-    }
-    exit(1);
-} catch (\mysqli_sql_exception $e) { // Altera para a exceção específica do MySQLi
-    echo "\nERRO CRÍTICO (mysqli_sql_exception): " . $e->getMessage() . "\n";
+    error_log("Detalhes do erro original (logado): " . $e->getMessage());
     exit(1);
 } catch (Exception $e) {
     echo "\nERRO CRÍTICO INESPERADO: " . $e->getMessage() . "\n";
     exit(1);
 } finally {
-    // É uma boa prática fechar a conexão, embora o PHP o faça automaticamente ao final do script
-    if (isset($conn) && $conn instanceof mysqli) {
-        $conn->close();
-    }
+    Database::closeConnection();
 }
-
 
 echo "\n--- Migrações Concluídas --- \n";
