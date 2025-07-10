@@ -3,177 +3,299 @@
 namespace App\Controllers;
 
 use App\Services\ProcedimentoService;
-use App\Models\Procedimento; // Assumindo que você tem um modelo Procedimento
-use App\Exceptions\DatabaseException; // Assumindo que você tem uma exceção de banco de dados
+use App\Services\PessoaService;
+use App\Services\DemandanteService;
+use App\Services\BairroService;
+use App\Services\SexoService;
+use App\Services\TerritorioService;
+use App\Exceptions\DatabaseException;
+use App\Utils\TokenManager;
+use InvalidArgumentException;
 
-/**
- * Controller para a entidade Procedimento.
- * Lida com as requisições HTTP relacionadas a procedimentos.
- */
-class ProcedimentoController
+class ProcedimentoController extends BaseController
 {
     private $procedimentoService;
+    private $pessoaService;
+    private $demandanteService;
+    private $bairroService;
+    private $sexoService;
+    private $territorioService;
 
-    /**
-     * Construtor do ProcedimentoController.
-     * Injeta a dependência do ProcedimentoService.
-     */
     public function __construct()
     {
+        parent::__construct(); // Chama o construtor do BaseController
         $this->procedimentoService = new ProcedimentoService();
+        $this->pessoaService = new PessoaService();
+        $this->demandanteService = new DemandanteService();
+        $this->bairroService = new BairroService();
+        $this->sexoService = new SexoService();
+        $this->territorioService = new TerritorioService();
     }
 
     /**
-     * Exibe a lista de todos os procedimentos.
+     * Exibe a página de gerenciamento de procedimentos.
      */
+    public function index(): void
+    {
+        // A página de índice não carrega dados por padrão, eles são carregados via AJAX.
+        // Apenas renderiza a view principal.
+        $this->render('procedimentos/index');
+    }
+
+    /**
+     * Retorna procedimentos com base em filtros de pesquisa em formato JSON.
+     */
+    public function searchJson(): void
+    {
+        header('Content-Type: application/json');
+        $filtros = $_GET;
+
+        // Validação do território do usuário logado
+        $userTerritoryId = $_SESSION['user_territory_id'] ?? null;
+        if (!$userTerritoryId) {
+            $this->renderJson(['success' => false, 'message' => 'Território do usuário não definido.'], 401);
+            return;
+        }
+
+        try {
+            $procedimentos = $this->procedimentoService->buscarProcedimentosComFiltros($filtros, (int)$userTerritoryId);
+            $this->renderJson($procedimentos);
+        } catch (DatabaseException $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro ao buscar procedimentos: ' . $e->getMessage()], 500);
+        } catch (InvalidArgumentException $e) {
+            $this->renderJson(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
+    /**
+     * Retorna os detalhes de um procedimento específico em formato JSON, validando o token.
+     */
+    public function mostrarJson(): void
+    {
+        header('Content-Type: application/json');
+        $token = $_GET['token'] ?? null;
+
+        if (!$token) {
+            $this->renderJson(['success' => false, 'message' => 'Token não fornecido.'], 400);
+            return;
+        }
+
+        $id = TokenManager::validateToken($token, false); // Não remove o token, pois pode ser usado para edição logo em seguida
+
+        if (!$id) {
+            $this->renderJson(['success' => false, 'message' => 'Token inválido ou expirado.'], 401);
+            return;
+        }
+
+        try {
+            $procedimento = $this->procedimentoService->obterProcedimentoPorIdComNomes($id);
+            if ($procedimento) {
+                // Verifica se o procedimento pertence ao território do usuário logado
+                $userTerritoryId = $_SESSION['user_territory_id'] ?? null;
+                if ($userTerritoryId && $procedimento['id_territorio'] != $userTerritoryId) {
+                    $this->renderJson(['success' => false, 'message' => 'Acesso negado. Procedimento não pertence ao seu território.'], 403);
+                    return;
+                }
+                $this->renderJson($procedimento);
+            } else {
+                $this->renderJson(['success' => false, 'message' => 'Procedimento não encontrado.'], 404);
+            }
+        } catch (DatabaseException $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro ao carregar detalhes do procedimento: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Salva um novo procedimento no banco de dados via requisição AJAX.
+     * Retorna uma resposta JSON.
+     */
+    public function salvarJson(): void
+    {
+        header('Content-Type: application/json');
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        // Adiciona o ID do usuário logado para auditoria
+        $input['id_usuario_criacao'] = $_SESSION['user_id'] ?? null;
+        $input['id_usuario_atualizacao'] = $_SESSION['user_id'] ?? null; // Para consistência, se não houver update posterior
+
+        // Validação do território: novo procedimento deve pertencer ao território do usuário logado
+        $userTerritoryId = $_SESSION['user_territory_id'] ?? null;
+        if (!$userTerritoryId) {
+            $this->renderJson(['success' => false, 'message' => 'Território do usuário não definido.'], 401);
+            return;
+        }
+        $input['id_territorio'] = (int)$userTerritoryId; // Força o território do usuário logado
+
+        try {
+            $newId = $this->procedimentoService->salvarProcedimento($input);
+            $this->renderJson(['success' => true, 'message' => 'Procedimento criado com sucesso!', 'id' => $newId]);
+        } catch (\InvalidArgumentException $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro de validação: ' . $e->getMessage()], 400);
+        } catch (DatabaseException $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro ao salvar procedimento: ' . $e->getMessage()], 500);
+        } catch (\Exception $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro inesperado ao salvar procedimento: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Atualiza um procedimento existente no banco de dados via requisição AJAX, validando o token.
+     * Retorna uma resposta JSON.
+     */
+    public function atualizarJson(): void
+    {
+        header('Content-Type: application/json');
+        $token = $_GET['token'] ?? null; // Pega o token da URL
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        if (!$token) {
+            $this->renderJson(['success' => false, 'message' => 'Token não fornecido.'], 400);
+            return;
+        }
+
+        $id = TokenManager::validateToken($token, true); // Remove o token após o uso
+
+        if (!$id) {
+            $this->renderJson(['success' => false, 'message' => 'Token inválido ou expirado.'], 401);
+            return;
+        }
+
+        // Validação do território: procedimento deve pertencer ao território do usuário logado
+        $userTerritoryId = $_SESSION['user_territory_id'] ?? null;
+        if (!$userTerritoryId) {
+            $this->renderJson(['success' => false, 'message' => 'Território do usuário não definido.'], 401);
+            return;
+        }
+        // Buscar o procedimento para verificar se pertence ao território do usuário
+        $procedimentoExistente = $this->procedimentoService->obterProcedimentoPorIdComNomes($id);
+        if (!$procedimentoExistente || $procedimentoExistente['id_territorio'] != $userTerritoryId) {
+            $this->renderJson(['success' => false, 'message' => 'Acesso negado. Procedimento não pertence ao seu território ou não encontrado.'], 403);
+            return;
+        }
+
+        // Adiciona o ID do usuário logado para auditoria
+        $input['id_usuario_atualizacao'] = $_SESSION['user_id'] ?? null;
+
+        try {
+            $success = $this->procedimentoService->atualizarProcedimento($id, $input);
+            if ($success) {
+                $this->renderJson(['success' => true, 'message' => 'Procedimento atualizado com sucesso!']);
+            } else {
+                $this->renderJson(['success' => false, 'message' => 'Falha ao atualizar procedimento ou nenhum dado alterado.'], 500);
+            }
+        } catch (\InvalidArgumentException $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro de validação: ' . $e->getMessage()], 400);
+        } catch (DatabaseException $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro ao atualizar procedimento: ' . $e->getMessage()], 500);
+        } catch (\Exception $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro inesperado ao atualizar procedimento: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Deleta um procedimento existente no banco de dados via requisição AJAX, validando o token.
+     * Retorna uma resposta JSON.
+     */
+    public function deletarJson(): void
+    {
+        header('Content-Type: application/json');
+        $token = $_GET['token'] ?? null; // Pega o token da URL
+
+        if (!$token) {
+            $this->renderJson(['success' => false, 'message' => 'Token não fornecido.'], 400);
+            return;
+        }
+
+        $id = TokenManager::validateToken($token, true); // Remove o token após o uso
+
+        if (!$id) {
+            $this->renderJson(['success' => false, 'message' => 'Token inválido ou expirado.'], 401);
+            return;
+        }
+
+        // Validação do território: procedimento deve pertencer ao território do usuário logado
+        $userTerritoryId = $_SESSION['user_territory_id'] ?? null;
+        if (!$userTerritoryId) {
+            $this->renderJson(['success' => false, 'message' => 'Território do usuário não definido.'], 401);
+            return;
+        }
+        $procedimentoExistente = $this->procedimentoService->obterProcedimentoPorIdComNomes($id);
+        if (!$procedimentoExistente || $procedimentoExistente['id_territorio'] != $userTerritoryId) {
+            $this->renderJson(['success' => false, 'message' => 'Acesso negado. Procedimento não pertence ao seu território ou não encontrado.'], 403);
+            return;
+        }
+
+        try {
+            $success = $this->procedimentoService->deletarProcedimento($id);
+            if ($success) {
+                $this->renderJson(['success' => true, 'message' => 'Procedimento excluído com sucesso!']);
+            } else {
+                $this->renderJson(['success' => false, 'message' => 'Falha ao excluir procedimento ou procedimento não encontrado.'], 500);
+            }
+        } catch (DatabaseException $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro ao excluir procedimento: ' . $e->getMessage()], 500);
+        } catch (\Exception $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro inesperado ao excluir procedimento: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // Métodos CRUD básicos (mantidos para compatibilidade, mas a UI usará os JSON)
     public function listar(): void
     {
         try {
             $procedimentos = $this->procedimentoService->obterTodosProcedimentos();
-            // Renderiza a view de listagem, passando os dados dos procedimentos
-            $this->render('procedimentos/listar', ['dados' => $procedimentos]); // Alterado para 'dados' para compatibilidade com template
+            $this->render('procedimentos/listar', ['procedimentos' => $procedimentos]);
         } catch (DatabaseException $e) {
-            // Em um ambiente real, você logaria o erro e mostraria uma página de erro amigável.
-            echo "Erro ao carregar procedimentos: " . $e->getMessage();
+            $this->renderJson(['success' => false, 'message' => 'Erro ao carregar procedimentos: ' . $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Exibe os detalhes de um procedimento específico.
-     *
-     * @param int $id O ID do procedimento a ser exibido.
-     */
     public function mostrar(int $id): void
     {
         try {
-            $procedimento = $this->procedimentoService->obterProcedimentoPorId($id);
-
+            $procedimento = $this->procedimentoService->obterProcedimentoPorIdComNomes($id);
             if ($procedimento) {
-                // Renderiza a view de detalhes, passando os dados do procedimento
-                $this->render('procedimentos/detalhe', ['item' => $procedimento]); // Alterado para 'item' para compatibilidade com template
+                $this->render('procedimentos/detalhe', ['procedimento' => $procedimento]);
             } else {
-                // Procedimento não encontrado, pode redirecionar para uma página 404 ou exibir uma mensagem
-                echo "Procedimento não encontrado.";
+                $this->render('404', [], 404);
             }
         } catch (DatabaseException $e) {
-            echo "Erro ao carregar detalhes do procedimento: " . $e->getMessage();
+            $this->renderJson(['success' => false, 'message' => 'Erro ao carregar detalhes do procedimento: ' . $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Exibe o formulário para criar um novo procedimento.
-     */
     public function criar(): void
     {
+        // Esta função não será usada diretamente pela UI de procedimentos, mas pode ser mantida para outros fins
         $this->render('procedimentos/criar');
     }
 
-    /**
-     * Salva um novo procedimento no banco de dados.
-     * Este método seria chamado via POST.
-     */
     public function salvar(): void
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Aqui você processaria os dados do POST
-            $dados = $_POST; // Exemplo simples, em um projeto real faria validação e sanitização
-            try {
-                // Adiciona o ID do usuário logado e a data/hora atual para criação
-                $dados['id_usuario_criacao'] = $_SESSION['user_id'] ?? null;
-                $dados['data_criacao'] = date('Y-m-d');
-                $dados['hora_criacao'] = date('H:i:s');
-
-                $newId = $this->procedimentoService->salvarProcedimento($dados);
-                if ($newId) {
-                    header('Location: /procedimentos/mostrar?id=' . $newId); // Redireciona para os detalhes do novo procedimento
-                    exit();
-                } else {
-                    echo "Falha ao criar procedimento.";
-                }
-            } catch (\InvalidArgumentException $e) {
-                echo "Erro de validação: " . $e->getMessage();
-            } catch (DatabaseException $e) {
-                echo "Erro ao salvar procedimento: " . $e->getMessage();
-            }
-        } else {
-            // Se a requisição não for POST, redireciona para o formulário de criação
-            header("Location: /procedimentos/criar");
-            exit();
-        }
+        // Esta função não será usada diretamente pela UI de procedimentos, mas pode ser mantida para outros fins
+        // A lógica de salvamento agora está em salvarJson()
+        $this->renderJson(['success' => false, 'message' => 'Método não suportado. Use salvarJson.'], 405);
     }
 
-    /**
-     * Exibe o formulário para editar um procedimento existente.
-     *
-     * @param int $id O ID do procedimento a ser editado.
-     */
     public function editar(int $id): void
     {
+        // Esta função não será usada diretamente pela UI de procedimentos, mas pode ser mantida para outros fins
         try {
-            $procedimento = $this->procedimentoService->obterProcedimentoPorId($id);
+            $procedimento = $this->procedimentoService->obterProcedimentoPorIdComNomes($id);
             if ($procedimento) {
-                $this->render('procedimentos/editar', ['item' => $procedimento]); // Alterado para 'item'
+                $this->render('procedimentos/editar', ['procedimento' => $procedimento]);
             } else {
-                echo "Procedimento não encontrado para edição.";
+                $this->render('404', [], 404);
             }
         } catch (DatabaseException $e) {
-            echo "Erro ao carregar procedimento para edição: " . $e->getMessage();
+            $this->renderJson(['success' => false, 'message' => 'Erro ao carregar procedimento para edição: ' . $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Atualiza um procedimento existente no banco de dados.
-     * Este método seria chamado via POST.
-     *
-     * @param int $id O ID do procedimento a ser atualizado.
-     */
     public function atualizar(int $id): void
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Aqui você processaria os dados do POST
-            $dados = $_POST; // Exemplo simples
-            try {
-                // Adiciona o ID do usuário logado e a data/hora atual para atualização
-                $dados['id_usuario_atualizacao'] = $_SESSION['user_id'] ?? null;
-                $dados['data_hora_atualizacao'] = date('Y-m-d H:i:s');
-
-                $success = $this->procedimentoService->atualizarProcedimento($id, $dados);
-                if ($success) {
-                    header('Location: /procedimentos/mostrar?id=' . $id); // Redireciona para os detalhes do procedimento atualizado
-                    exit();
-                } else {
-                    echo "Falha ao atualizar procedimento ID {$id}.";
-                }
-            } catch (\InvalidArgumentException $e) {
-                echo "Erro de validação: " . $e->getMessage();
-            } catch (DatabaseException $e) {
-                echo "Erro ao atualizar procedimento: " . $e->getMessage();
-            }
-        } else {
-            // Se a requisição não for POST, redireciona para o formulário de edição
-            header("Location: /procedimentos/editar?id=" . $id);
-            exit();
-        }
-    }
-
-    /**
-     * Função auxiliar para renderizar as views.
-     *
-     * @param string $viewName O nome da view (ex: 'procedimentos/listar').
-     * @param array $data Um array associativo de dados a serem passados para a view.
-     */
-    private function render(string $viewName, array $data = []): void
-    {
-        // Extrai os dados para que as variáveis fiquem disponíveis diretamente na view
-        extract($data);
-
-        // Inclui o arquivo da view
-        $viewPath = __DIR__ . '/../Views/' . $viewName . '.php';
-
-        if (file_exists($viewPath)) {
-            require $viewPath;
-        } else {
-            echo "Erro: View '{$viewName}' não encontrada.";
-        }
+        // Esta função não será usada diretamente pela UI de procedimentos, mas pode ser mantida para outros fins
+        // A lógica de atualização agora está em atualizarJson()
+        $this->renderJson(['success' => false, 'message' => 'Método não suportado. Use atualizarJson.'], 405);
     }
 }

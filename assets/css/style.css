@@ -129,3 +129,29 @@ body.error-page {
     margin-bottom: 1.5rem;
     color: #343a40;
 }
+
+/* Estilos específicos para a tela de procedimentos */
+.autocomplete-results {
+    position: absolute;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    width: calc(100% - 1.5rem); /* Ajusta à largura do input pai com padding */
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.25rem;
+}
+.autocomplete-results div {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+}
+.autocomplete-results div:hover {
+    background-color: #e9ecef;
+}
+.form-check-inline {
+    margin-right: 1rem;
+}
+.search-field-group {
+    position: relative;
+}

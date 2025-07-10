@@ -28,7 +28,7 @@ class PessoaDAO implements BaseDAOInterface
     }
 
     /**
-     * Busca todas as pessoas.
+     * Busca todos as pessoas.
      *
      * @return array Um array de objetos Pessoa.
      * @throws DatabaseException Se houver um erro no banco de dados.
@@ -128,6 +128,34 @@ class PessoaDAO implements BaseDAOInterface
         $stmt->close();
         $result->free();
         return $pessoas;
+    }
+
+    /**
+     * Busca pessoas pelo nome (LIKE) e data de nascimento.
+     * Usado para verificar se uma pessoa já existe com nome e data de nascimento específicos.
+     *
+     * @param string $nome O nome da pessoa.
+     * @param string $dataNascimento A data de nascimento da pessoa (formato YYYY-MM-DD).
+     * @return Pessoa|null O objeto Pessoa encontrado ou null.
+     * @throws DatabaseException Se houver um erro no banco de dados.
+     */
+    public function buscarPorNomeEDataNascimento(string $nome, string $dataNascimento): ?Pessoa
+    {
+        $sql = "SELECT * FROM {$this->tableName} WHERE nome = ? AND data_nascimento = ? LIMIT 1";
+        $stmt = Database::prepare($sql);
+        $stmt->bind_param("ss", $nome, $dataNascimento);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result === false) {
+            throw new DatabaseException("Erro ao buscar pessoa por nome e data de nascimento: " . $stmt->error, $stmt->errno);
+        }
+
+        $data = $result->fetch_assoc();
+        $stmt->close();
+        $result->free();
+
+        return $data ? $this->hydrate($data) : null;
     }
 
     /**

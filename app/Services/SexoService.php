@@ -5,7 +5,11 @@ namespace App\Services;
 use App\DAO\SexoDAO;
 use App\Models\Sexo;
 use App\Exceptions\DatabaseException;
+use InvalidArgumentException;
 
+/**
+ * Serviço para gerenciar operações relacionadas a Sexos.
+ */
 class SexoService
 {
     private $sexoDAO;
@@ -15,36 +19,26 @@ class SexoService
         $this->sexoDAO = new SexoDAO();
     }
 
+    /**
+     * Obtém todos os sexos.
+     *
+     * @return array Um array de objetos Sexo.
+     * @throws DatabaseException Se houver um erro no banco de dados.
+     */
     public function obterTodosSexos(): array
     {
         return $this->sexoDAO->buscarTodos();
     }
 
+    /**
+     * Obtém um sexo pelo ID.
+     *
+     * @param int $id O ID do sexo.
+     * @return Sexo|null O objeto Sexo ou null se não encontrado.
+     * @throws DatabaseException Se houver um erro no banco de dados.
+     */
     public function obterSexoPorId(int $id): ?Sexo
     {
         return $this->sexoDAO->buscarPorID($id);
-    }
-
-    public function salvarSexo(array $dados)
-    {
-        if (empty($dados['nome']) || empty($dados['sigla'])) {
-            throw new \InvalidArgumentException("Nome e sigla do sexo são obrigatórios.");
-        }
-        $sexo = new Sexo($dados);
-        return $this->sexoDAO->criar($sexo);
-    }
-
-    public function atualizarSexo(int $id, array $dados): bool
-    {
-        $sexoExistente = $this->sexoDAO->buscarPorID($id);
-        if (!$sexoExistente) {
-            throw new \InvalidArgumentException("Sexo com ID {$id} não encontrado para atualização.");
-        }
-        foreach ($dados as $key => $value) {
-            if (property_exists($sexoExistente, $key)) {
-                $sexoExistente->$key = $value;
-            }
-        }
-        return $this->sexoDAO->atualizar($sexoExistente);
     }
 }

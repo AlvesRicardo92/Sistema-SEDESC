@@ -3,25 +3,79 @@
 namespace App\Controllers;
 
 use App\Services\BairroService;
-use App\Models\Bairro; // Assumindo que você tem um modelo Bairro
-use App\Exceptions\DatabaseException; // Assumindo que você tem uma exceção de banco de dados
+use App\Exceptions\DatabaseException;
+use InvalidArgumentException;
 
-class BairroController
+class BairroController extends BaseController
 {
     private $bairroService;
 
     public function __construct()
     {
+        parent::__construct(); // Chama o construtor do BaseController
         $this->bairroService = new BairroService();
     }
 
+    /**
+     * Retorna todos os bairros ativos em formato JSON.
+     */
+    public function listarAtivosJson(): void
+    {
+        header('Content-Type: application/json');
+        try {
+            $bairros = $this->bairroService->obterTodosBairrosAtivos();
+            $formattedBairros = [];
+            foreach ($bairros as $bairro) {
+                $formattedBairros[] = [
+                    'id' => $bairro->id,
+                    'nome' => $bairro->nome,
+                    'territorio_id' => $bairro->territorio_id
+                ];
+            }
+            $this->renderJson($formattedBairros);
+        } catch (DatabaseException $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro ao carregar bairros: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Retorna bairros ativos de um território específico em formato JSON.
+     */
+    public function listarPorTerritorioJson(): void
+    {
+        header('Content-Type: application/json');
+        $territorioId = $_GET['id_territorio'] ?? null;
+
+        if (!is_numeric($territorioId) || $territorioId <= 0) {
+            $this->renderJson(['success' => false, 'message' => 'ID do território inválido.'], 400);
+            return;
+        }
+
+        try {
+            $bairros = $this->bairroService->obterBairrosAtivosPorTerritorioId((int)$territorioId);
+            $formattedBairros = [];
+            foreach ($bairros as $bairro) {
+                $formattedBairros[] = [
+                    'id' => $bairro->id,
+                    'nome' => $bairro->nome,
+                    'territorio_id' => $bairro->territorio_id
+                ];
+            }
+            $this->renderJson($formattedBairros);
+        } catch (DatabaseException $e) {
+            $this->renderJson(['success' => false, 'message' => 'Erro ao carregar bairros por território: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // Métodos para CRUD de Bairro (se necessário, podem ser adicionados aqui)
+    // Ex: listar, mostrar, criar, editar, atualizar
     public function listar(): void
     {
         try {
-            $bairros = $this->bairroService->obterTodosBairros();
+            $bairros = $this->bairroService->obterTodosBairrosAtivos();
             $this->render('bairros/listar', ['bairros' => $bairros]);
         } catch (DatabaseException $e) {
-            echo "Erro ao carregar bairros: " . $e->getMessage();
+            $this->renderJson(['success' => false, 'message' => 'Erro ao carregar bairros: ' . $e->getMessage()], 500);
         }
     }
 
@@ -32,85 +86,11 @@ class BairroController
             if ($bairro) {
                 $this->render('bairros/detalhe', ['bairro' => $bairro]);
             } else {
-                echo "Bairro não encontrado.";
+                $this->render('404', [], 404);
             }
         } catch (DatabaseException $e) {
-            echo "Erro ao carregar detalhes do bairro: " . $e->getMessage();
+            $this->renderJson(['success' => false, 'message' => 'Erro ao carregar detalhes do bairro: ' . $e->getMessage()], 500);
         }
     }
-
-    public function criar(): void
-    {
-        $this->render('bairros/criar');
-    }
-
-    public function salvar(): void
-    {
-        // Aqui você processaria os dados do POST
-        $dados = $_POST; // Exemplo simples, em um projeto real faria validação e sanitização
-        try {
-            $this->bairroService->salvarBairro($dados);
-            header('Location: /bairros'); // Redireciona para a lista após salvar
-            exit();
-        } catch (\InvalidArgumentException $e) {
-            echo "Erro de validação: " . $e->getMessage();
-        } catch (DatabaseException $e) {
-            echo "Erro ao salvar bairro: " . $e->getMessage();
-        }
-    }
-
-    public function editar(int $id): void
-    {
-        try {
-            $bairro = $this->bairroService->obterBairroPorId($id);
-            if ($bairro) {
-                $this->render('bairros/editar', ['bairro' => $bairro]);
-            } else {
-                echo "Bairro não encontrado para edição.";
-            }
-        } catch (DatabaseException $e) {
-            echo "Erro ao carregar bairro para edição: " . $e->getMessage();
-        }
-    }
-
-    public function atualizar(int $id): void
-    {
-        // Aqui você processaria os dados do POST
-        $dados = $_POST; // Exemplo simples
-        try {
-            $this->bairroService->atualizarBairro($id, $dados);
-            header('Location: /bairros'); // Redireciona para a lista após atualizar
-            exit();
-        } catch (\InvalidArgumentException $e) {
-            echo "Erro de validação: " . $e->getMessage();
-        } catch (DatabaseException $e) {
-            echo "Erro ao atualizar bairro: " . $e->getMessage();
-        }
-    }
-
-    public function deletar(int $id): void
-    {
-        try {
-            if ($this->bairroService->deletarBairro($id)) {
-                header('Location: /bairros'); // Redireciona para a lista após deletar
-                exit();
-            } else {
-                echo "Erro ao deletar bairro ou bairro não encontrado.";
-            }
-        } catch (DatabaseException $e) {
-            echo "Erro ao deletar bairro: " . $e->getMessage();
-        }
-    }
-
-    private function render(string $viewName, array $data = []): void
-    {
-        extract($data);
-        $viewPath = __DIR__ . '/../Views/' . $viewName . '.php';
-        if (file_exists($viewPath)) {
-            require $viewPath;
-        } else {
-            echo "Erro: View '{$viewName}' não encontrada.";
-        }
-    }
+    // ... outros métodos CRUD se a UI para Bairro for separada
 }
-    

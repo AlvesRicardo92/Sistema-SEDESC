@@ -131,6 +131,34 @@ class BairroDAO implements BaseDAOInterface
     }
 
     /**
+     * Busca bairros ativos por ID do território.
+     *
+     * @param int $territorioId O ID do território.
+     * @return array Um array de objetos Bairro.
+     * @throws DatabaseException Se houver um erro no banco de dados.
+     */
+    public function buscarAtivosPorTerritorioId(int $territorioId): array
+    {
+        $sql = "SELECT * FROM {$this->tableName} WHERE ativo = 1 AND territorio_id = ?";
+        $stmt = Database::prepare($sql);
+        $stmt->bind_param("i", $territorioId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result === false) {
+            throw new DatabaseException("Erro ao buscar bairros ativos por território: " . $stmt->error, $stmt->errno);
+        }
+
+        $bairros = [];
+        while ($row = $result->fetch_assoc()) {
+            $bairros[] = $this->hydrate($row);
+        }
+        $stmt->close();
+        $result->free();
+        return $bairros;
+    }
+
+    /**
      * Cria um novo bairro no banco de dados.
      *
      * @param Bairro $bairro O objeto Bairro a ser criado.

@@ -7,33 +7,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/style.css"> <!-- Link para o CSS externo -->
-    <style>
-        /* Estilos específicos para esta tela, se necessário */
-        .autocomplete-results {
-            position: absolute;
-            background-color: white;
-            border: 1px solid #dee2e6;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            width: calc(100% - 1.5rem); /* Ajusta à largura do input pai com padding */
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            border-radius: 0.25rem;
-        }
-        .autocomplete-results div {
-            padding: 0.5rem 0.75rem;
-            cursor: pointer;
-        }
-        .autocomplete-results div:hover {
-            background-color: #e9ecef;
-        }
-        .form-check-inline {
-            margin-right: 1rem;
-        }
-        .search-field-group {
-            position: relative;
-        }
-    </style>
 </head>
 <body>
     <!-- Navbar Superior (mantida do dashboard) -->

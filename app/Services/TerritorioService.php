@@ -5,7 +5,11 @@ namespace App\Services;
 use App\DAO\TerritorioDAO;
 use App\Models\Territorio;
 use App\Exceptions\DatabaseException;
+use InvalidArgumentException;
 
+/**
+ * Serviço para gerenciar operações relacionadas a Territórios.
+ */
 class TerritorioService
 {
     private $territorioDAO;
@@ -15,36 +19,26 @@ class TerritorioService
         $this->territorioDAO = new TerritorioDAO();
     }
 
+    /**
+     * Obtém todos os territórios.
+     *
+     * @return array Um array de objetos Territorio.
+     * @throws DatabaseException Se houver um erro no banco de dados.
+     */
     public function obterTodosTerritorios(): array
     {
         return $this->territorioDAO->buscarTodos();
     }
 
+    /**
+     * Obtém um território pelo ID.
+     *
+     * @param int $id O ID do território.
+     * @return Territorio|null O objeto Territorio ou null se não encontrado.
+     * @throws DatabaseException Se houver um erro no banco de dados.
+     */
     public function obterTerritorioPorId(int $id): ?Territorio
     {
         return $this->territorioDAO->buscarPorID($id);
-    }
-
-    public function salvarTerritorio(array $dados)
-    {
-        if (empty($dados['nome'])) {
-            throw new \InvalidArgumentException("Nome do território é obrigatório.");
-        }
-        $territorio = new Territorio($dados);
-        return $this->territorioDAO->criar($territorio);
-    }
-
-    public function atualizarTerritorio(int $id, array $dados): bool
-    {
-        $territorioExistente = $this->territorioDAO->buscarPorID($id);
-        if (!$territorioExistente) {
-            throw new \InvalidArgumentException("Território com ID {$id} não encontrado para atualização.");
-        }
-        foreach ($dados as $key => $value) {
-            if (property_exists($territorioExistente, $key)) {
-                $territorioExistente->$key = $value;
-            }
-        }
-        return $this->territorioDAO->atualizar($territorioExistente);
     }
 }
